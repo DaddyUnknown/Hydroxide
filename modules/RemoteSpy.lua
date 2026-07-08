@@ -1,7 +1,9 @@
 local RemoteSpy = {}
 local Remote = import("objects/Remote")
-local NetworkStats = import("modules/NetworkStats") -- Network statistics tracking
-local AutomationGenerator = import("modules/AutomationGenerator") -- NEW: Automation script generation
+
+-- Lazy load new modules to avoid init errors
+local NetworkStats
+local AutomationGenerator
 
 local requiredMethods = {
     ["checkCaller"] = true,
@@ -92,11 +94,23 @@ nmcTrampoline = hookMetaMethod(game, "__namecall", function(...)
             remote.IncrementCalls(remote, call)
             remoteDataEvent.Fire(remoteDataEvent, instance, call)
             
-            -- NEW: Track network statistics
-            pcall(NetworkStats.trackCall, instance, vargs)
+            -- NEW: Track network statistics (lazy load)
+            if not NetworkStats then
+                local success, module = pcall(import, "modules/NetworkStats")
+                if success then NetworkStats = module end
+            end
+            if NetworkStats then
+                pcall(NetworkStats.trackCall, instance, vargs)
+            end
             
-            -- NEW: Record for automation if recording active
-            pcall(AutomationGenerator.recordCall, instance, vargs)
+            -- NEW: Record for automation if recording active (lazy load)
+            if not AutomationGenerator then
+                local success, module = pcall(import, "modules/AutomationGenerator")
+                if success then AutomationGenerator = module end
+            end
+            if AutomationGenerator then
+                pcall(AutomationGenerator.recordCall, instance, vargs)
+            end
         end
 
         if remoteBlocked or argsBlocked then
@@ -151,11 +165,23 @@ for _name, hook in pairs(methodHooks) do
                 remote:IncrementCalls(call)
                 remoteDataEvent:Fire(instance, call)
                 
-                -- NEW: Track network statistics
-                pcall(NetworkStats.trackCall, instance, vargs)
+                -- NEW: Track network statistics (lazy load)
+                if not NetworkStats then
+                    local success, module = pcall(import, "modules/NetworkStats")
+                    if success then NetworkStats = module end
+                end
+                if NetworkStats then
+                    pcall(NetworkStats.trackCall, instance, vargs)
+                end
                 
-                -- NEW: Record for automation if recording active
-                pcall(AutomationGenerator.recordCall, instance, vargs)
+                -- NEW: Record for automation if recording active (lazy load)
+                if not AutomationGenerator then
+                    local success, module = pcall(import, "modules/AutomationGenerator")
+                    if success then AutomationGenerator = module end
+                end
+                if AutomationGenerator then
+                    pcall(AutomationGenerator.recordCall, instance, vargs)
+                end
             end
 
             if remote.Blocked or remote:AreArgsBlocked(vargs) then
@@ -169,10 +195,27 @@ for _name, hook in pairs(methodHooks) do
     oh.Hooks[originalMethod] = hook
 end
 
+-- Lazy load function for external access
+local function getNetworkStats()
+    if not NetworkStats then
+        local success, module = pcall(import, "modules/NetworkStats")
+        if success then NetworkStats = module end
+    end
+    return NetworkStats
+end
+
+local function getAutomationGenerator()
+    if not AutomationGenerator then
+        local success, module = pcall(import, "modules/AutomationGenerator")
+        if success then AutomationGenerator = module end
+    end
+    return AutomationGenerator
+end
+
 RemoteSpy.RemotesViewing = remotesViewing
 RemoteSpy.CurrentRemotes = currentRemotes
 RemoteSpy.ConnectEvent = connectEvent
 RemoteSpy.RequiredMethods = requiredMethods
-RemoteSpy.NetworkStats = NetworkStats -- Expose network statistics module
-RemoteSpy.AutomationGenerator = AutomationGenerator -- NEW: Expose automation generator
+RemoteSpy.GetNetworkStats = getNetworkStats -- Lazy getter
+RemoteSpy.GetAutomationGenerator = getAutomationGenerator -- Lazy getter
 return RemoteSpy
