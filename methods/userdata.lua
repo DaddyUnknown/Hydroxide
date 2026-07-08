@@ -46,13 +46,27 @@ local function userdataValue(data)
         return data.Name
     elseif dataType == "BrickColor" then
         return dataType .. ".new(\"" .. tostring(data) .. "\")"
-    -- NEW: Buffer type support (2024+)
+    -- NEW: Buffer type support (2024+) - with safety check
     elseif dataType == "buffer" then
-        local bufferLen = buffer.len(data)
-        return "buffer.create(" .. bufferLen .. ") --[[ " .. bufferLen .. " bytes ]]"
+        local success, result = pcall(function()
+            local bufferLen = buffer.len(data)
+            return "buffer.create(" .. bufferLen .. ") --[[ " .. bufferLen .. " bytes ]]"
+        end)
+        if success then
+            return result
+        else
+            return "buffer (error reading)"
+        end
     -- NEW: Font type support (2024+)
     elseif dataType == "Font" then
-        return "Font.new(\"" .. tostring(data.Family) .. "\", " .. tostring(data.Weight) .. ", " .. tostring(data.Style) .. ")"
+        local success, result = pcall(function()
+            return "Font.new(\"" .. tostring(data.Family) .. "\", " .. tostring(data.Weight) .. ", " .. tostring(data.Style) .. ")"
+        end)
+        if success then
+            return result
+        else
+            return "Font.new(...)"
+        end
     elseif
         dataType == "TweenInfo" or
         dataType == "Vector3" or

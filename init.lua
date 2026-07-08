@@ -300,6 +300,72 @@ useMethods(import("methods/string"))
 useMethods(import("methods/table"))
 useMethods(import("methods/userdata"))
 useMethods(import("methods/environment"))
-useMethods(import("methods/buffer")) -- NEW: Buffer handling methods (2024+)
+
+-- NEW: Buffer handling methods (2024+) - optional, load safely
+local success, bufferMethods = pcall(import, "methods/buffer")
+if success and bufferMethods then
+    useMethods(bufferMethods)
+else
+    -- Fallback: inline buffer methods if module not available
+    local inlineBufferMethods = {}
+    
+    inlineBufferMethods.bufferToString = function(bufferData)
+        if typeof(bufferData) ~= "buffer" then
+            return tostring(bufferData)
+        end
+        local length = buffer.len(bufferData)
+        if length == 0 then
+            return "buffer.create(0) -- Empty buffer"
+        end
+        if length <= 32 then
+            local hexString = ""
+            for i = 0, length - 1 do
+                local byte = buffer.readu8(bufferData, i)
+                hexString = hexString .. string.format("%02X ", byte)
+            end
+            return "buffer (" .. length .. " bytes): " .. hexString
+        else
+            return "buffer.create(" .. length .. ") -- " .. length .. " bytes"
+        end
+    end
+    
+    inlineBufferMethods.bufferToHex = function(bufferData, maxBytes)
+        if typeof(bufferData) ~= "buffer" then return "" end
+        maxBytes = maxBytes or 256
+        local length = math.min(buffer.len(bufferData), maxBytes)
+        local hexString = ""
+        for i = 0, length - 1 do
+            if i > 0 and i % 16 == 0 then hexString = hexString .. "\n" end
+            local byte = buffer.readu8(bufferData, i)
+            hexString = hexString .. string.format("%02X ", byte)
+        end
+        if buffer.len(bufferData) > maxBytes then
+            hexString = hexString .. "\n... (truncated)"
+        end
+        return hexString
+    end
+    
+    inlineBufferMethods.bufferToArray = function(bufferData)
+        if typeof(bufferData) ~= "buffer" then return {} end
+        local length = buffer.len(bufferData)
+        local array = {}
+        for i = 0, length - 1 do
+            array[i + 1] = buffer.readu8(bufferData, i)
+        end
+        return array
+    end
+    
+    inlineBufferMethods.isBufferEmpty = function(bufferData)
+        if typeof(bufferData) ~= "buffer" then return true end
+        local length = buffer.len(bufferData)
+        if length == 0 then return true end
+        for i = 0, length - 1 do
+            if buffer.readu8(bufferData, i) ~= 0 then return false end
+        end
+        return true
+    end
+    
+    useMethods(inlineBufferMethods)
+end
 
 --import("ui/main")
