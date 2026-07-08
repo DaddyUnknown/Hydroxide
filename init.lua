@@ -34,12 +34,18 @@ end
 local globalMethods = {
     checkCaller = checkcaller,
     newCClosure = newcclosure,
-    hookFunction = hookfunction or detour_function,
+    -- UPDATED: Prefer modern hooking methods (2026)
+    hookFunction = hookfunction or detour_function or replaceclosure,
+    hookMetaMethod = hookmetamethod or (hookfunction and function(object, method, hook) 
+        local mt = getMetatable(object)
+        if not mt then return nil end
+        return hookfunction(mt[method], hook) 
+    end),
     getGc = getgc or get_gc_objects,
     getInfo = debug.getinfo or getinfo,
     getSenv = getsenv,
     getMenv = getmenv or getsenv,
-    getContext = getthreadcontext or get_thread_context or (syn and syn.get_thread_identity),
+    getContext = getthreadcontext or get_thread_context or getidentity or (syn and syn.get_thread_identity),
     getConnections = get_signal_cons or getconnections,
     getScriptClosure = getscriptclosure or get_script_function,
     getNamecallMethod = getnamecallmethod or get_namecall_method,
@@ -54,21 +60,24 @@ local globalMethods = {
     getProto = debug.getproto or getproto,
     getMetatable = getrawmetatable or debug.getmetatable,
     getHui = get_hidden_gui or gethui,
-    setClipboard = setclipboard or writeclipboard,
+    setClipboard = setclipboard or writeclipboard or toclipboard,
     setConstant = debug.setconstant or setconstant or setconst,
-    setContext = setthreadcontext or set_thread_context or (syn and syn.set_thread_identity),
+    setContext = setthreadcontext or set_thread_context or setidentity or (syn and syn.set_thread_identity),
     setUpvalue = debug.setupvalue or setupvalue or setupval,
     setStack = debug.setstack or setstack,
     setReadOnly = setreadonly or (make_writeable and function(table, readonly) if readonly then make_readonly(table) else make_writeable(table) end end),
     isLClosure = islclosure or is_l_closure or (iscclosure and function(closure) return not iscclosure(closure) end),
     isReadOnly = isreadonly or is_readonly,
     isXClosure = is_synapse_function or issentinelclosure or is_protosmasher_closure or is_sirhurt_closure or iselectronfunction or istempleclosure or checkclosure,
-    hookMetaMethod = hookmetamethod or (hookfunction and function(object, method, hook) return hookfunction(getMetatable(object)[method], hook) end),
     readFile = readfile,
     writeFile = writefile,
     makeFolder = makefolder,
     isFolder = isfolder,
     isFile = isfile,
+    -- NEW: Modern 2026 executor functions
+    clonefunction = clonefunction or function(f) return f end,
+    replaceclosure = replaceclosure or hookfunction,
+    isexecutorclosure = isexecutorclosure or isourclosure or checkclosure,
 }
 
 if PROTOSMASHER_LOADED then
@@ -113,7 +122,8 @@ environment.oh = {
             vector = "rbxassetid://4666594723",
             ["function"] = "rbxassetid://4666593447",
             ["thread"] = "rbxassetid://4666593447",
-            ["integral"] = "rbxassetid://4666593882"
+            ["integral"] = "rbxassetid://4666593882",
+            buffer = "rbxassetid://4666594723", -- NEW: Buffer type icon (2024+)
         },
         Syntax = {
             ["nil"] = Color3.fromRGB(244, 135, 113),
@@ -125,7 +135,8 @@ environment.oh = {
             vector = Color3.fromRGB(225, 225, 225),
             ["function"] = Color3.fromRGB(225, 225, 225),
             ["thread"] = Color3.fromRGB(225, 225, 225),
-            ["unnamed_function"] = Color3.fromRGB(175, 175, 175)
+            ["unnamed_function"] = Color3.fromRGB(175, 175, 175),
+            buffer = Color3.fromRGB(200, 150, 255) -- NEW: Buffer syntax highlighting (2024+)
         }
     },
     Exit = function()
@@ -289,5 +300,6 @@ useMethods(import("methods/string"))
 useMethods(import("methods/table"))
 useMethods(import("methods/userdata"))
 useMethods(import("methods/environment"))
+useMethods(import("methods/buffer")) -- NEW: Buffer handling methods (2024+)
 
 --import("ui/main")
