@@ -46,6 +46,13 @@ local function userdataValue(data)
         return data.Name
     elseif dataType == "BrickColor" then
         return dataType .. ".new(\"" .. tostring(data) .. "\")"
+    -- NEW: Buffer type support (2024+)
+    elseif dataType == "buffer" then
+        local bufferLen = buffer.len(data)
+        return "buffer.create(" .. bufferLen .. ") --[[ " .. bufferLen .. " bytes ]]"
+    -- NEW: Font type support (2024+)
+    elseif dataType == "Font" then
+        return "Font.new(\"" .. tostring(data.Family) .. "\", " .. tostring(data.Weight) .. ", " .. tostring(data.Style) .. ")"
     elseif
         dataType == "TweenInfo" or
         dataType == "Vector3" or
@@ -111,6 +118,8 @@ local function isUserdata(type)
         or type == "NumberRange"
         or type == "NumberSequence"
         or type == "NumberSequenceKeypoint"
+        or type == "buffer" -- NEW: Buffer type (2024+)
+        or type == "Font" -- NEW: Font type (2024+)
 end
 
 methods.isUserdata = isUserdata

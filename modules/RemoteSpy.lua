@@ -1,5 +1,7 @@
 local RemoteSpy = {}
 local Remote = import("objects/Remote")
+local NetworkStats = import("modules/NetworkStats") -- Network statistics tracking
+local AutomationGenerator = import("modules/AutomationGenerator") -- NEW: Automation script generation
 
 local requiredMethods = {
     ["checkCaller"] = true,
@@ -25,14 +27,16 @@ local remotesViewing = {
     RemoteEvent = true,
     RemoteFunction = false,
     BindableEvent = false,
-    BindableFunction = false
+    BindableFunction = false,
+    UnreliableRemoteEvent = true -- NEW: Support for UnreliableRemoteEvent (2023+)
 }
 
 local methodHooks = {
     RemoteEvent = Instance.new("RemoteEvent").FireServer,
     RemoteFunction = Instance.new("RemoteFunction").InvokeServer,
     BindableEvent = Instance.new("BindableEvent").Fire,
-    BindableFunction = Instance.new("BindableFunction").Invoke
+    BindableFunction = Instance.new("BindableFunction").Invoke,
+    UnreliableRemoteEvent = Instance.new("UnreliableRemoteEvent").FireServer -- NEW: Hook for UnreliableRemoteEvent
 }
 
 local currentRemotes = {}
@@ -87,6 +91,12 @@ nmcTrampoline = hookMetaMethod(game, "__namecall", function(...)
 
             remote.IncrementCalls(remote, call)
             remoteDataEvent.Fire(remoteDataEvent, instance, call)
+            
+            -- NEW: Track network statistics
+            pcall(NetworkStats.trackCall, instance, vargs)
+            
+            -- NEW: Record for automation if recording active
+            pcall(AutomationGenerator.recordCall, instance, vargs)
         end
 
         if remoteBlocked or argsBlocked then
@@ -140,6 +150,12 @@ for _name, hook in pairs(methodHooks) do
     
                 remote:IncrementCalls(call)
                 remoteDataEvent:Fire(instance, call)
+                
+                -- NEW: Track network statistics
+                pcall(NetworkStats.trackCall, instance, vargs)
+                
+                -- NEW: Record for automation if recording active
+                pcall(AutomationGenerator.recordCall, instance, vargs)
             end
 
             if remote.Blocked or remote:AreArgsBlocked(vargs) then
@@ -157,4 +173,6 @@ RemoteSpy.RemotesViewing = remotesViewing
 RemoteSpy.CurrentRemotes = currentRemotes
 RemoteSpy.ConnectEvent = connectEvent
 RemoteSpy.RequiredMethods = requiredMethods
+RemoteSpy.NetworkStats = NetworkStats -- Expose network statistics module
+RemoteSpy.AutomationGenerator = AutomationGenerator -- NEW: Expose automation generator
 return RemoteSpy

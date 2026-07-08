@@ -63,7 +63,8 @@ local icons = {
     RemoteEvent = "rbxassetid://4229806545",
     RemoteFunction = "rbxassetid://4229810474",
     BindableEvent = "rbxassetid://4229809371",
-    BindableFunction = "rbxassetid://4229807624"
+    BindableFunction = "rbxassetid://4229807624",
+    UnreliableRemoteEvent = "rbxassetid://4229806545" -- NEW: Icon for UnreliableRemoteEvent (same as RemoteEvent with visual distinction)
 }
 
 local constants = {
@@ -434,11 +435,11 @@ function Log.adjust(log)
     local logIcon = logInstance.Icon
 
     local callWidth = TextService:GetTextSize(logInstance.Calls.Text, 18, "SourceSans", constants.textWidth).X + 10
-    local iconPosition = callWidth - (((remoteClassName == "RemoteEvent" or remoteClassName == "BindableEvent") and 4) or 0)
+    local iconPosition = callWidth - (((remoteClassName == "RemoteEvent" or remoteClassName == "BindableEvent" or remoteClassName == "UnreliableRemoteEvent") and 4) or 0)
     local labelWidth = iconPosition + 21
 
     logInstance.Calls.Size = UDim2.new(0, callWidth, 1, 0)
-    logIcon.Position = UDim2.new(0, iconPosition, 0.5, (remoteClassName == "RemoteEvent" and -9) or -7)
+    logIcon.Position = UDim2.new(0, iconPosition, 0.5, (remoteClassName == "RemoteEvent" or remoteClassName == "UnreliableRemoteEvent" and -9) or -7)
     logInstance.Label.Position = UDim2.new(0, labelWidth, 0, 0)
     logInstance.Label.Size = UDim2.new(1, -labelWidth, 1, 0)
 end
@@ -845,6 +846,8 @@ scriptContext:SetCallback(function()
         method = "Fire"
     elseif remoteClassName == "BindableFunction" then
         method = "Invoke"
+    elseif remoteClassName == "UnreliableRemoteEvent" then
+        method = "FireServer" -- NEW: UnreliableRemoteEvent uses FireServer
     end
 
     local oldStatus = oh.getStatus()
@@ -919,6 +922,8 @@ repeatCallContext:SetCallback(function()
         method = "Fire"
     elseif remoteClassName == "BindableFunction" then
         method = "Invoke"
+    elseif remoteClassName == "UnreliableRemoteEvent" then
+        method = "FireServer" -- NEW: UnreliableRemoteEvent uses FireServer
     end
 
     local oldStatus = oh.getStatus()
